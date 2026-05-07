@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Exec=bash /PATH/TO/winapps-monitor.sh
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=WinApps Monitor
+Comment=Auto-launch WinApps Manager GUI when WinApps is running
