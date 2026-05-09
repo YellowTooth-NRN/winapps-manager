@@ -23,7 +23,7 @@ REFRESH_INTERVAL = 3000
 def get_xfreerdp_pid():
     try:
         result = subprocess.run(
-            ['pgrep', '-f', 'xfreerdp3'],
+            ['pgrep', '-f', 'xfreerdp3.*app:program'],
             capture_output=True, text=True
         )
         pid = result.stdout.strip().split('\n')[0]
@@ -240,7 +240,9 @@ class WinAppsManager(Gtk.Window):
 
     def _check_winapps_alive(self):
         if not get_winapps_windows():
-            subprocess.run(['pkill', '-f', 'xfreerdp'])
+            pid = get_xfreerdp_pid()
+            if pid:
+                subprocess.run(['kill', pid])
             GLib.timeout_add(500, Gtk.main_quit)
             return False
         return True
@@ -308,7 +310,9 @@ class WinAppsManager(Gtk.Window):
         resp = dialog.run()
         dialog.destroy()
         if resp == Gtk.ResponseType.YES:
-            subprocess.run(['pkill', '-f', 'xfreerdp'])
+            pid = get_xfreerdp_pid()
+            if pid:
+                subprocess.run(['kill', pid])
             self.status.set_text("WinApps 종료됨")
             GLib.timeout_add(800, self._refresh)
 

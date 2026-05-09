@@ -15,7 +15,7 @@ ABSENT_THRESHOLD=3
 WAGUI_PID=""
 
 while true; do
-    if pgrep -x "xfreerdp3" > /dev/null; then
+    if pgrep -f "xfreerdp3.*app:program" > /dev/null; then
         ABSENT_COUNT=0
         if ! pgrep -f "winapps-manager.py" > /dev/null; then
             DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 python3 "$TARGET_PY" &
