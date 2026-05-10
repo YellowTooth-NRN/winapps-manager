@@ -235,16 +235,21 @@ class WinAppsManager(Gtk.Window):
             self.status.set_text(f"{len(windows)}개 창 감지 — PID {pid} — {REFRESH_INTERVAL//1000}초마다 자동 새로고침")
 
     def _start_alive_check(self):
+        self._empty_count = 0
         GLib.timeout_add(1000, self._check_winapps_alive)
         return False
 
     def _check_winapps_alive(self):
         if not get_winapps_windows():
-            pid = get_xfreerdp_pid()
-            if pid:
-                subprocess.run(['kill', pid])
-            GLib.timeout_add(500, Gtk.main_quit)
-            return False
+            self._empty_count = getattr(self, '_empty_count', 0) + 1
+            if self._empty_count >= 15:
+                pid = get_xfreerdp_pid()
+                if pid:
+                    subprocess.run(['kill', pid])
+                GLib.timeout_add(500, Gtk.main_quit)
+                return False
+        else:
+            self._empty_count = 0
         return True
 
     def _auto_refresh(self):
