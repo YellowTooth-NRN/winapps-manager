@@ -32,3 +32,22 @@
 - fish & bash shell functions (`wamgr`)
 - Korean / English versions
 - Supports Arch, Debian/Ubuntu, RHEL/Fedora
+
+## [1.2.0] - 2026-05-11
+
+### Bug Fixes
+
+- **[Critical] Fixed infinite GUI restart loop**
+  - GUI no longer auto-closes itself
+  - Removed `_check_winapps_alive` self-termination logic
+  - Monitor script is now solely responsible for closing the GUI
+
+- **[Fix] Fixed double xfreerdp process spawning**
+  - Previously GUI killing xfreerdp caused monitor to relaunch it, creating duplicate processes
+
+- **[Fix] Added DISPLAY/WAYLAND_DISPLAY env to all subprocess calls**
+  - Prevents `Cannot get client list properties` error in wmctrl
+
+- **[Fix] WinApps-only session detection**
+  - Only detects xfreerdp sessions with `/app:program` flag
+  - Prevents interfering with regular full-screen RDP sessions

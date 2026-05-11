@@ -1,19 +1,31 @@
 #!/usr/bin/env python3
 """
-WinApps 창 관리 GUI (wmctrl 기반) - 한국어
-의존성: python3-gi, wmctrl, xdotool
+WinApps 창 관리 GUI (wmctrl 기반)
+의존성: python3-gi, wmctrl
+설치: sudo pacman -S python-gobject wmctrl
 """
 
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, GLib, Gdk
 import os
+
+# 환경변수 강제 설정
 if not os.environ.get("DISPLAY"):
     os.environ["DISPLAY"] = ":0"
 if not os.environ.get("WAYLAND_DISPLAY"):
     os.environ["WAYLAND_DISPLAY"] = "wayland-0"
 
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib, Gdk
 import subprocess
+import os
+
+# 환경변수 강제 설정
+if not os.environ.get("DISPLAY"):
+    os.environ["DISPLAY"] = ":0"
+if not os.environ.get("WAYLAND_DISPLAY"):
+    os.environ["WAYLAND_DISPLAY"] = "wayland-0"
+import os
+import signal
 import threading
 
 APP_TITLE = "WinApps Manager"
@@ -37,7 +49,10 @@ def get_winapps_windows():
     if not pid:
         return []
     try:
-        result = subprocess.run(['wmctrl', '-l', '-p'], capture_output=True, text=True)
+        env = os.environ.copy()
+        env['DISPLAY'] = env.get('DISPLAY', ':0')
+        env['WAYLAND_DISPLAY'] = env.get('WAYLAND_DISPLAY', 'wayland-0')
+        result = subprocess.run(['wmctrl', '-l', '-p'], capture_output=True, text=True, env=env)
         windows = []
         for line in result.stdout.strip().split('\n'):
             if not line:
@@ -59,6 +74,7 @@ def get_winapps_windows():
 
 
 def close_window(wid):
+    """개별 창 닫기"""
     try:
         subprocess.run(['wmctrl', '-ic', wid], timeout=3)
         return True
@@ -109,12 +125,13 @@ class WinAppsManager(Gtk.Window):
         self._build_ui()
         self._refresh()
         GLib.timeout_add(REFRESH_INTERVAL, self._auto_refresh)
-        GLib.timeout_add(10000, self._start_alive_check)
+
 
     def _build_ui(self):
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(root)
 
+        # 헤더
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         header.get_style_context().add_class('header')
         info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -156,6 +173,7 @@ class WinAppsManager(Gtk.Window):
         header.pack_end(btns, False, False, 0)
         root.pack_start(header, False, False, 0)
 
+        # 검색바
         search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         search_box.set_border_width(8)
         search_box.set_spacing(6)
@@ -166,6 +184,7 @@ class WinAppsManager(Gtk.Window):
         search_box.pack_start(self.search_entry, True, True, 0)
         root.pack_start(search_box, False, False, 0)
 
+        # 창 목록
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scroll.set_vexpand(True)
@@ -189,6 +208,7 @@ class WinAppsManager(Gtk.Window):
         scroll.add(self.tree)
         root.pack_start(scroll, True, True, 0)
 
+        # 힌트 + 상태바
         hint = Gtk.Label(label="💡 행 더블클릭으로 해당 창 바로 올리기")
         hint.get_style_context().add_class('statusbar')
         hint.set_halign(Gtk.Align.START)
@@ -209,6 +229,7 @@ class WinAppsManager(Gtk.Window):
         self.filter_store.refilter()
 
     def _refresh(self):
+        # 현재 선택된 wid 기억
         selected_wid = None
         sel = self.tree.get_selection()
         model, treeiter = sel.get_selected()
@@ -221,6 +242,7 @@ class WinAppsManager(Gtk.Window):
         for w in windows:
             self.store.append([w['wid'], w['title']])
 
+        # 선택 복원
         if selected_wid:
             for i, row in enumerate(self.store):
                 if row[0] == selected_wid:
@@ -234,23 +256,6 @@ class WinAppsManager(Gtk.Window):
         else:
             self.status.set_text(f"{len(windows)}개 창 감지 — PID {pid} — {REFRESH_INTERVAL//1000}초마다 자동 새로고침")
 
-    def _start_alive_check(self):
-        self._empty_count = 0
-        GLib.timeout_add(1000, self._check_winapps_alive)
-        return False
-
-    def _check_winapps_alive(self):
-        if not get_winapps_windows():
-            self._empty_count = getattr(self, '_empty_count', 0) + 1
-            if self._empty_count >= 15:
-                pid = get_xfreerdp_pid()
-                if pid:
-                    subprocess.run(['kill', pid])
-                GLib.timeout_add(500, Gtk.main_quit)
-                return False
-        else:
-            self._empty_count = 0
-        return True
 
     def _auto_refresh(self):
         self._refresh()
@@ -260,6 +265,17 @@ class WinAppsManager(Gtk.Window):
         model = tree.get_model()
         wid = model[path][0]
         title = model[path][1]
+        if raise_window(wid):
+            self.status.set_text(f"↑ {title}")
+
+    def _on_raise_selected(self, _):
+        selection = self.tree.get_selection()
+        model, treeiter = selection.get_selected()
+        if not treeiter:
+            self.status.set_text("창을 먼저 선택하세요")
+            return
+        wid = model[treeiter][0]
+        title = model[treeiter][1]
         if raise_window(wid):
             self.status.set_text(f"↑ {title}")
 

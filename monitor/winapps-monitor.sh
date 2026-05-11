@@ -1,10 +1,6 @@
 #!/bin/bash
-# WinApps Monitor - Auto-launch GUI when WinApps is running
-# Modify TARGET_PY to match your installation path
-
-TARGET_PY="$HOME/winappsmgr/winapps-manager.py"
+TARGET_PY="/home/jbyoon/winappsmgr/winapps-manager.py"
 UID_NUM=$(id -u)
-
 export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${UID_NUM}/bus"
 export XDG_RUNTIME_DIR="/run/user/${UID_NUM}"
 export DISPLAY=:0
